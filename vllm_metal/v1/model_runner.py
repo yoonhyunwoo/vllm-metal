@@ -294,12 +294,6 @@ class MetalModelRunner:
             vllm_config: vLLM configuration
             device: PyTorch device (CPU for Metal interop)
         """
-        if vllm_config.model_config.logits_processors or entry_points(
-            group=LOGITSPROCS_GROUP
-        ):
-            raise NotImplementedError(
-                "vllm-metal does not support custom logits processors."
-            )
 
         self.vllm_config = vllm_config
         self.model_config = vllm_config.model_config

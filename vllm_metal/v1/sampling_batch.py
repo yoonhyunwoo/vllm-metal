@@ -184,6 +184,7 @@ class SamplingBatch:
             and sampling_params.logprobs is None
             and not sampling_params.allowed_token_ids
             and not sampling_params.bad_words_token_ids
+            and not sampling_params.logits_processors
             for sampling_params in sampling_params_list
         )
 
@@ -300,6 +301,23 @@ class SamplingBatch:
                 result[i] = sp.bad_words_token_ids
         return result
 
+    def _make_logitsprocs(self) -> LogitsProcessors:
+        """Collect per-request logits processors from SamplingParams.
+
+        Wire custom logits processors (e.g. watermarking, grammar constraints)
+        from ``SamplingParams.logits_processors`` into the vLLM sampler.
+        Returns the shared empty instance when no request has processors.
+        """
+        any_procs = any(
+            sp.logits_processors for sp in self.sampling_params_list
+        )
+        if not any_procs:
+            return _EMPTY_LOGITSPROCS
+        return LogitsProcessors(
+            [list(sp.logits_processors) if sp.logits_processors else []
+             for sp in self.sampling_params_list]
+        )
+
     def make_sampling_metadata(self) -> SamplingMetadata:
         """Create vLLM ``SamplingMetadata`` for this batch."""
         (
@@ -324,7 +342,7 @@ class SamplingBatch:
             no_penalties=self.no_penalties,
             allowed_token_ids_mask=self._make_allowed_token_ids_mask(),
             bad_words_token_ids=self._make_bad_words_token_ids(),
-            logitsprocs=_EMPTY_LOGITSPROCS,
+            logitsprocs=self._make_logitsprocs(),
             logprob_token_ids=None,
         )
 
